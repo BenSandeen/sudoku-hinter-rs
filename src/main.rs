@@ -18,7 +18,19 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     solve(board.borrow_mut(), Cell{row: 0, col: 0}, rng);
-    println!("{:?}", board)
+    println!("{:?}", board);
+
+    board = read_puzzle(String::from("9x9_tough.csv"));
+    solve(board.borrow_mut(), Cell{row: 0, col: 0}, rng);
+    println!("{:?}", board);
+    //
+    // board = read_puzzle(String::from("16x16_sample_puzzle.csv"));
+    // solve(board.borrow_mut(), Cell{row: 0, col: 0}, rng);
+    // println!("{:?}", board);
+    //
+    // board = read_puzzle(String::from("16x16_another_puzzle.csv"));
+    // solve(board.borrow_mut(), Cell{row: 0, col: 0}, rng);
+    // println!("{:?}", board);
 }
 
 fn solve(curr_board: &mut Board, last_modified_cell: Cell, mut rng: ThreadRng) {
@@ -28,11 +40,20 @@ fn solve(curr_board: &mut Board, last_modified_cell: Cell, mut rng: ThreadRng) {
         }
 
         for (jj, &_col) in row.iter().enumerate() {
-            let mut untried_cell_values = curr_board.all_nums_to_match.clone();
+            let mut untried_cell_values: Vec<i8> = curr_board.all_nums_to_match.clone();
+                // .into_iter().filter(|x| !curr_board.get_row(ii).contains(x) &&
+                // !curr_board.get_col(jj).contains(x) &&
+                // !curr_board.get_subsquare(&Cell { row: ii, col: jj }).contains(x)).collect();
+                // .into_iter().filter(|x| !curr_board.get_row(ii).contains(x)).collect();
+            // println!("untried_cell_values: {:?}", &untried_cell_values);
+            // println!("row {0}: {1:?}", ii, curr_board.get_row(ii));
+            // println!("col {0}: {1:?}", jj, curr_board.get_col(jj));
+            // println!("subsq {0}{1}: {2:?}", ii, jj, curr_board.get_subsquare(&Cell { row: ii, col: jj }));
 
             while curr_board[Cell{row: ii, col: jj}] == 0 {
                 // If there's no more valid numbers to try, backtrack and try previous cell again
                 if untried_cell_values.len() == 0 {
+                    // println!("backtracking!");
                     curr_board[last_modified_cell] = 0;
                     return;
                 }
@@ -42,20 +63,17 @@ fn solve(curr_board: &mut Board, last_modified_cell: Cell, mut rng: ThreadRng) {
                     Some(&x) => x,
                     None => break,
                 };
-                // println!("temp: {:?}", temp);
+
                 untried_cell_values.retain(|&x| x != temp);  // Remove `temp` from list
                 curr_board[Cell{row: ii, col: jj}] = temp;
 
                 if check_intermediate_puzzle(&curr_board, Cell{row: ii, col: jj})
                 {
-                    // println!("recursing");
                     solve(curr_board.borrow_mut(), Cell{row: ii, col: jj}, rng);
                 } else {
-                    // println!("trying again");
                     curr_board[Cell{row: ii, col: jj}] = 0i8;
                 }
             }
-            // println!("Curr row: {:?}", curr_board.get_row(ii));
         }
     }
     if check_complete_puzzle(curr_board) {
@@ -174,19 +192,6 @@ impl IndexMut<Cell> for Board {
         &mut self.board[cell.row][cell.col]
     }
 }
-
-// impl Iterator for Board {
-//     type Item = Vec<i8>;
-//
-//     fn next(&mut self) -> Option<&Vec<i8>> {
-//         self.board.iter().next().expect("poopsies")
-//     }
-// }
-
-// #[derive(Deserialize)]
-// struct Board_only {
-//     board: Vec<Vec<i8>>
-// }
 
 fn read_puzzle(file_name: String) -> Board {
     let mut reader = csv::Reader::from_path(&file_name).expect("poop0");
