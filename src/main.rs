@@ -1,17 +1,11 @@
 use csv;
-use std::num;
-use std::fs::File;
-use std::io::prelude::*;
-use std::path::Path;
 use std::borrow::{BorrowMut, Borrow};
 use serde::Deserialize;
-use rand::Rng;
 use std::ops::{Index, IndexMut, Rem};
-use core::fmt::Alignment::Center;
-use std::thread::current;
 use std::collections::HashSet;
 use rand::prelude::ThreadRng;
 use std::hash::Hash;
+use rand::seq::SliceRandom;
 
 
 fn main() {
@@ -24,31 +18,87 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     solve(board.borrow_mut(), Cell{row: 0, col: 0}, rng);
+    println!("{:?}", board)
 }
 
 fn solve(curr_board: &mut Board, last_modified_cell: Cell, mut rng: ThreadRng) {
     for (ii, row) in curr_board.board.clone().into_iter().enumerate() {
-        if (ii < last_modified_cell.row) {
+        if ii < last_modified_cell.row {
             continue;
         }
-        for (jj, col) in row.iter().enumerate() {
-            while (curr_board[Cell{row: ii, col: jj}] == 0) {
-                let temp = rng.gen_range(1, curr_board.size + 1);
+
+        for (jj, &_col) in row.iter().enumerate() {
+            let mut untried_cell_values = curr_board.all_nums_to_match.clone();
+
+            while curr_board[Cell{row: ii, col: jj}] == 0 {
+                // If there's no more valid numbers to try, backtrack and try previous cell again
+                if untried_cell_values.len() == 0 {
+                    curr_board[last_modified_cell] = 0;
+                    return;
+                }
+
+                // let temp = rng.gen_range(1, curr_board.size + 1);
+                let temp: i8 = match untried_cell_values.choose(&mut rng) {
+                    Some(&x) => x,
+                    None => break,
+                };
+                // println!("temp: {:?}", temp);
+                untried_cell_values.retain(|&x| x != temp);  // Remove `temp` from list
                 curr_board[Cell{row: ii, col: jj}] = temp;
+
+                if check_intermediate_puzzle(&curr_board, Cell{row: ii, col: jj})
+                {
+                    // println!("recursing");
+                    solve(curr_board.borrow_mut(), Cell{row: ii, col: jj}, rng);
+                } else {
+                    // println!("trying again");
+                    curr_board[Cell{row: ii, col: jj}] = 0i8;
+                }
             }
+            // println!("Curr row: {:?}", curr_board.get_row(ii));
         }
+    }
+    if check_complete_puzzle(curr_board) {
+        return
     }
 }
 
-fn check_intermediate_puzzle(curr_board: Board, last_modified_cell: Cell) -> bool {
-    if (!has_unique_elements(curr_board.get_row((&last_modified_cell).row))) {
+fn check_intermediate_puzzle(curr_board: &Board, last_modified_cell: Cell) -> bool {
+    // println!("Row: {:?}", curr_board.get_row((&last_modified_cell).row));
+    // println!("Col: {:?}", curr_board.get_col((&last_modified_cell).col));
+    // println!("SS: {:?}", curr_board.get_subsquare(&last_modified_cell));
+    if !has_unique_elements(curr_board.get_row((&last_modified_cell).row)) {
         return false;
-    } else if (!has_unique_elements(curr_board.get_col((&last_modified_cell).col))) {
+    } else if !has_unique_elements(curr_board.get_col((&last_modified_cell).col)) {
         return false;
-    } else if (!has_unique_elements(curr_board.get_subsquare(last_modified_cell))) {
+    } else if !has_unique_elements(curr_board.get_subsquare(&last_modified_cell)) {
         return false;
     }
     true
+}
+
+fn check_complete_puzzle(curr_board: &Board) -> bool {
+    for row in curr_board.board.iter() {
+        if !curr_board.all_nums_to_match.iter().all(|x| row.contains(x)) {
+            return false;
+        }
+    }
+    for col_idx in 0..curr_board.size as usize {
+        let col = curr_board.borrow().get_col(col_idx);
+        if !curr_board.all_nums_to_match.iter().all(|x| col.contains(x)) {
+            return false;
+        }
+    }
+    for subsquare_row_idx in 0..curr_board.subsquare_size {
+        for subsquare_col_idx in 0..curr_board.subsquare_size {
+            let subsquare = curr_board.get_subsquare(&Cell{row: subsquare_row_idx, col: subsquare_col_idx});
+            if !curr_board.all_nums_to_match.iter().all(|x| subsquare.contains(x)) {
+                return false;
+            }
+        }
+    }
+
+    return true
 }
 
 /// Checks any sort of iterable to see if there are any duplicates.
@@ -65,34 +115,31 @@ fn has_unique_elements<T>(iter: T) -> bool
 
 #[derive(Debug, Deserialize)]
 struct Board {
-    board: Vec<Vec<i8>>,
     size: i8,
-    subsquare_size: usize
+    subsquare_size: usize,
+    all_nums_to_match: Vec<i8>,
+    board: Vec<Vec<i8>>,
 }
 
 impl Board{
     fn new(nums: Vec<Vec<i8>>) -> Board {
-        Board{
+        Board {
             size: nums.len() as i8,
             subsquare_size: (nums.len() as f64).sqrt() as usize,
+            all_nums_to_match: (1..nums.len() as i8 + 1).collect(),
             board: nums,
         }
     }
 
     fn get_row(&self, row: usize) -> Vec<i8> {
-        // let stuff = &self.board.clone()[row].iter().filter(|&&x| x != 0).cloned().collect() as &Vec<i8>
-        // match stuff.len() {
-        //     0 => None,
-        //     _ => Some(stuff)
-        // }
-        self.board.clone()[row].iter().map(|&x| x).filter(|&x| x != 0).into_iter().collect()
+        self.board[row].clone().iter().map(|&x| x).filter(|&x| x != 0).into_iter().collect()
     }
 
     fn get_col(&self, col: usize) -> Vec<i8> {
         self.board.clone().iter().map(|row| row[col]).filter(|&x| x != 0).collect()
     }
 
-    fn get_subsquare(&self, cell: Cell) -> Vec<i8> {
+    fn get_subsquare(&self, cell: &Cell) -> Vec<i8> {
         let subsquare_row_idx = cell.row.rem(self.subsquare_size as usize);
         let subsq_row_start = subsquare_row_idx * self.subsquare_size;
         let subsq_row_end = subsq_row_start + self.subsquare_size;
@@ -101,30 +148,13 @@ impl Board{
         let subsq_col_start = subsquare_col_idx * self.subsquare_size;
         let subsq_col_end = subsq_col_start + self.subsquare_size;
 
-        // subsquare = [row[subsq_col_start:subsq_col_end] for row in curr_board[subsq_row_start:subsq_row_end]];
-        //
-        // // Flatten list of lists into single list and ignore zeros;
-        // subsquare_non_zeros = [item for sublist in subsquare for item in sublist if item != 0];
-        // let subsquare = self.board.iter().enumerate().filter(|(ii, row)|
-        //     (subsq_row_start..subsq_row_end).contains(&ii))
-        //     .flatten()
-        //     .filter(|&&x| x != 0)
-        //     .collect();
         let mut subsquare: Vec<i8> = Vec::new();
         for row in self.board[subsq_row_start..subsq_row_end].iter() {
             subsquare.extend_from_slice(&row[subsq_col_start..subsq_col_end]);
         }
 
-        subsquare
+        subsquare.clone().iter().filter(|&&x| x != 0).map(|x| *x).collect::<Vec<i8>>()
     }
-
-    // fn Index(self: Self, row: usize, col: usize) -> i8 {
-    //     self.board[row][col]
-    // }
-    //
-    // fn IndexMut(self: Self, row: usize, col: usize) -> i8 {
-    //     self.board[row][col]
-    // }
 }
 
 struct Cell {
@@ -134,19 +164,16 @@ struct Cell {
 
 impl Index<Cell> for Board {
     type Output = i8;
-    // fn index(&self, row: i32, col: i32) -> &i8 {
     fn index(&self, cell: Cell) -> &i8 {
         &self.board[cell.row][cell.col]
     }
 }
 
 impl IndexMut<Cell> for Board {
-    // fn index(&self, row: i32, col: i32) -> &i8 {
     fn index_mut(&mut self, cell: Cell) -> &mut i8 {
         &mut self.board[cell.row][cell.col]
     }
 }
-
 
 // impl Iterator for Board {
 //     type Item = Vec<i8>;
@@ -156,25 +183,25 @@ impl IndexMut<Cell> for Board {
 //     }
 // }
 
-#[derive(Deserialize)]
-struct Board_only {
-    board: Vec<Vec<i8>>
-}
+// #[derive(Deserialize)]
+// struct Board_only {
+//     board: Vec<Vec<i8>>
+// }
 
 fn read_puzzle(file_name: String) -> Board {
-    // let mut file = File::open(file_name)?;
     let mut reader = csv::Reader::from_path(&file_name).expect("poop0");
     let mut rows: Vec<Vec<i8>> = vec![];
 
-    for mut row in reader.deserialize(){
-        let mut values: Vec<i8> = row.expect("poop1");
+    for row in reader.deserialize(){
+        let values: Vec<i8> = row.expect("poop1");
         rows.push(values);
     }
-
+    println!("Number of rows: {}", rows.len());
 
     Board {
         size: rows.len() as i8,
         subsquare_size: (rows.len() as f64).sqrt() as usize,
+        all_nums_to_match: (1..rows.len() as i8 + 1).collect(),
         board: rows,
     }
 }
