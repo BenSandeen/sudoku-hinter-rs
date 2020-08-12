@@ -20,9 +20,9 @@ fn main() {
     board.solve(Cell{row: 0, col: 0}, rng);
     println!("{:?}", board);
 
-    // board = read_puzzle(String::from("9x9_tough.csv"));
-    // board.solve(Cell{row: 0, col: 0}, rng);
-    // println!("{:?}", board);
+    board = read_puzzle(String::from("9x9_tough.csv"));
+    board.solve(Cell{row: 0, col: 0}, rng);
+    println!("{:?}", board);
     //
     // board = read_puzzle(String::from("16x16_sample_puzzle.csv"));
     // board.solve(Cell{row: 0, col: 0}, rng);
@@ -235,10 +235,12 @@ impl Board{
         return true
     }
 
+    #[inline]
     fn get_row(&self, row: usize) -> Vec<i8> {
         self.board[row].clone().iter().map(|&x| x).filter(|&x| x != 0).into_iter().collect()
     }
 
+    #[inline]
     fn get_col(&self, col: usize) -> Vec<i8> {
         self.board.clone().iter().map(|row| row[col]).filter(|&x| x != 0).collect()
     }
