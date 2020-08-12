@@ -17,107 +17,107 @@ fn main() {
 
     let mut rng = rand::thread_rng();
 
-    solve(board.borrow_mut(), Cell{row: 0, col: 0}, rng);
+    board.solve(Cell{row: 0, col: 0}, rng);
     println!("{:?}", board);
 
-    board = read_puzzle(String::from("9x9_tough.csv"));
-    solve(board.borrow_mut(), Cell{row: 0, col: 0}, rng);
-    println!("{:?}", board);
+    // board = read_puzzle(String::from("9x9_tough.csv"));
+    // board.solve(Cell{row: 0, col: 0}, rng);
+    // println!("{:?}", board);
     //
     // board = read_puzzle(String::from("16x16_sample_puzzle.csv"));
-    // solve(board.borrow_mut(), Cell{row: 0, col: 0}, rng);
+    // board.solve(Cell{row: 0, col: 0}, rng);
     // println!("{:?}", board);
     //
     // board = read_puzzle(String::from("16x16_another_puzzle.csv"));
-    // solve(board.borrow_mut(), Cell{row: 0, col: 0}, rng);
+    // board.solve(Cell{row: 0, col: 0}, rng);
     // println!("{:?}", board);
 }
 
-fn solve(curr_board: &mut Board, last_modified_cell: Cell, mut rng: ThreadRng) {
-    for (ii, row) in curr_board.board.clone().into_iter().enumerate() {
-        if ii < last_modified_cell.row {
-            continue;
-        }
-
-        for (jj, &_col) in row.iter().enumerate() {
-            let mut untried_cell_values: Vec<i8> = curr_board.all_nums_to_match.clone();
-                // .into_iter().filter(|x| !curr_board.get_row(ii).contains(x) &&
-                // !curr_board.get_col(jj).contains(x) &&
-                // !curr_board.get_subsquare(&Cell { row: ii, col: jj }).contains(x)).collect();
-                // .into_iter().filter(|x| !curr_board.get_row(ii).contains(x)).collect();
-            // println!("untried_cell_values: {:?}", &untried_cell_values);
-            // println!("row {0}: {1:?}", ii, curr_board.get_row(ii));
-            // println!("col {0}: {1:?}", jj, curr_board.get_col(jj));
-            // println!("subsq {0}{1}: {2:?}", ii, jj, curr_board.get_subsquare(&Cell { row: ii, col: jj }));
-
-            while curr_board[Cell{row: ii, col: jj}] == 0 {
-                // If there's no more valid numbers to try, backtrack and try previous cell again
-                if untried_cell_values.len() == 0 {
-                    // println!("backtracking!");
-                    curr_board[last_modified_cell] = 0;
-                    return;
-                }
-
-                // let temp = rng.gen_range(1, curr_board.size + 1);
-                let temp: i8 = match untried_cell_values.choose(&mut rng) {
-                    Some(&x) => x,
-                    None => break,
-                };
-
-                untried_cell_values.retain(|&x| x != temp);  // Remove `temp` from list
-                curr_board[Cell{row: ii, col: jj}] = temp;
-
-                if check_intermediate_puzzle(&curr_board, Cell{row: ii, col: jj})
-                {
-                    solve(curr_board.borrow_mut(), Cell{row: ii, col: jj}, rng);
-                } else {
-                    curr_board[Cell{row: ii, col: jj}] = 0i8;
-                }
-            }
-        }
-    }
-    if check_complete_puzzle(curr_board) {
-        return
-    }
-}
-
-fn check_intermediate_puzzle(curr_board: &Board, last_modified_cell: Cell) -> bool {
-    // println!("Row: {:?}", curr_board.get_row((&last_modified_cell).row));
-    // println!("Col: {:?}", curr_board.get_col((&last_modified_cell).col));
-    // println!("SS: {:?}", curr_board.get_subsquare(&last_modified_cell));
-    if !has_unique_elements(curr_board.get_row((&last_modified_cell).row)) {
-        return false;
-    } else if !has_unique_elements(curr_board.get_col((&last_modified_cell).col)) {
-        return false;
-    } else if !has_unique_elements(curr_board.get_subsquare(&last_modified_cell)) {
-        return false;
-    }
-    true
-}
-
-fn check_complete_puzzle(curr_board: &Board) -> bool {
-    for row in curr_board.board.iter() {
-        if !curr_board.all_nums_to_match.iter().all(|x| row.contains(x)) {
-            return false;
-        }
-    }
-    for col_idx in 0..curr_board.size as usize {
-        let col = curr_board.borrow().get_col(col_idx);
-        if !curr_board.all_nums_to_match.iter().all(|x| col.contains(x)) {
-            return false;
-        }
-    }
-    for subsquare_row_idx in 0..curr_board.subsquare_size {
-        for subsquare_col_idx in 0..curr_board.subsquare_size {
-            let subsquare = curr_board.get_subsquare(&Cell{row: subsquare_row_idx, col: subsquare_col_idx});
-            if !curr_board.all_nums_to_match.iter().all(|x| subsquare.contains(x)) {
-                return false;
-            }
-        }
-    }
-
-    return true
-}
+// fn solve(curr_board: &mut Board, last_modified_cell: Cell, mut rng: ThreadRng) {
+//     for (ii, row) in curr_board.board.clone().into_iter().enumerate() {
+//         if ii < last_modified_cell.row {
+//             continue;
+//         }
+//
+//         for (jj, &_col) in row.iter().enumerate() {
+//             let mut untried_cell_values: Vec<i8> = curr_board.all_nums_to_match.clone();
+//                 // .into_iter().filter(|x| !curr_board.get_row(ii).contains(x) &&
+//                 // !curr_board.get_col(jj).contains(x) &&
+//                 // !curr_board.get_subsquare(&Cell { row: ii, col: jj }).contains(x)).collect();
+//                 // .into_iter().filter(|x| !curr_board.get_row(ii).contains(x)).collect();
+//             // println!("untried_cell_values: {:?}", &untried_cell_values);
+//             // println!("row {0}: {1:?}", ii, curr_board.get_row(ii));
+//             // println!("col {0}: {1:?}", jj, curr_board.get_col(jj));
+//             // println!("subsq {0}{1}: {2:?}", ii, jj, curr_board.get_subsquare(&Cell { row: ii, col: jj }));
+//
+//             while curr_board[Cell{row: ii, col: jj}] == 0 {
+//                 // If there's no more valid numbers to try, backtrack and try previous cell again
+//                 if untried_cell_values.len() == 0 {
+//                     // println!("backtracking!");
+//                     curr_board[last_modified_cell] = 0;
+//                     return;
+//                 }
+//
+//                 // let temp = rng.gen_range(1, curr_board.size + 1);
+//                 let temp: i8 = match untried_cell_values.choose(&mut rng) {
+//                     Some(&x) => x,
+//                     None => break,
+//                 };
+//
+//                 untried_cell_values.retain(|&x| x != temp);  // Remove `temp` from list
+//                 curr_board[Cell{row: ii, col: jj}] = temp;
+//
+//                 if check_intermediate_puzzle(&curr_board, Cell{row: ii, col: jj})
+//                 {
+//                     solve(curr_board.borrow_mut(), Cell{row: ii, col: jj}, rng);
+//                 } else {
+//                     curr_board[Cell{row: ii, col: jj}] = 0i8;
+//                 }
+//             }
+//         }
+//     }
+//     if check_complete_puzzle(curr_board) {
+//         return
+//     }
+// }
+//
+// fn check_intermediate_puzzle(curr_board: &Board, last_modified_cell: Cell) -> bool {
+//     // println!("Row: {:?}", curr_board.get_row((&last_modified_cell).row));
+//     // println!("Col: {:?}", curr_board.get_col((&last_modified_cell).col));
+//     // println!("SS: {:?}", curr_board.get_subsquare(&last_modified_cell));
+//     if !has_unique_elements(curr_board.get_row((&last_modified_cell).row)) {
+//         return false;
+//     } else if !has_unique_elements(curr_board.get_col((&last_modified_cell).col)) {
+//         return false;
+//     } else if !has_unique_elements(curr_board.get_subsquare(&last_modified_cell)) {
+//         return false;
+//     }
+//     true
+// }
+//
+// fn check_complete_puzzle(curr_board: &Board) -> bool {
+//     for row in curr_board.board.iter() {
+//         if !curr_board.all_nums_to_match.iter().all(|x| row.contains(x)) {
+//             return false;
+//         }
+//     }
+//     for col_idx in 0..curr_board.size as usize {
+//         let col = curr_board.borrow().get_col(col_idx);
+//         if !curr_board.all_nums_to_match.iter().all(|x| col.contains(x)) {
+//             return false;
+//         }
+//     }
+//     for subsquare_row_idx in 0..curr_board.subsquare_size {
+//         for subsquare_col_idx in 0..curr_board.subsquare_size {
+//             let subsquare = curr_board.get_subsquare(&Cell{row: subsquare_row_idx, col: subsquare_col_idx});
+//             if !curr_board.all_nums_to_match.iter().all(|x| subsquare.contains(x)) {
+//                 return false;
+//             }
+//         }
+//     }
+//
+//     return true
+// }
 
 /// Checks any sort of iterable to see if there are any duplicates.
 /// Copied and pasted shamelessly from: https://stackoverflow.com/a/46767732/3991562
@@ -147,6 +147,92 @@ impl Board{
             all_nums_to_match: (1..nums.len() as i8 + 1).collect(),
             board: nums,
         }
+    }
+
+    fn solve(&mut self, last_modified_cell: Cell, mut rng: ThreadRng) {
+        for (ii, row) in self.board.clone().into_iter().enumerate() {
+            if ii < last_modified_cell.row {
+                continue;
+            }
+
+            for (jj, &_col) in row.iter().enumerate() {
+                let mut untried_cell_values: Vec<i8> = self.all_nums_to_match.clone();
+                // .into_iter().filter(|x| !self.get_row(ii).contains(x) &&
+                // !self.get_col(jj).contains(x) &&
+                // !self.get_subsquare(&Cell { row: ii, col: jj }).contains(x)).collect();
+                // .into_iter().filter(|x| !self.get_row(ii).contains(x)).collect();
+                // println!("untried_cell_values: {:?}", &untried_cell_values);
+                // println!("row {0}: {1:?}", ii, self.get_row(ii));
+                // println!("col {0}: {1:?}", jj, self.get_col(jj));
+                // println!("subsq {0}{1}: {2:?}", ii, jj, self.get_subsquare(&Cell { row: ii, col: jj }));
+
+                while self[Cell{row: ii, col: jj}] == 0 {
+                    // If there's no more valid numbers to try, backtrack and try previous cell again
+                    if untried_cell_values.len() == 0 {
+                        // println!("backtracking!");
+                        self[last_modified_cell] = 0;
+                        return;
+                    }
+
+                    // let temp = rng.gen_range(1, curr_board.size + 1);
+                    let temp: i8 = match untried_cell_values.choose(&mut rng) {
+                        Some(&x) => x,
+                        None => break,
+                    };
+
+                    untried_cell_values.retain(|&x| x != temp);  // Remove `temp` from list
+                    self[Cell{row: ii, col: jj}] = temp;
+
+                    if self.check_intermediate_puzzle(Cell{row: ii, col: jj})
+                    {
+                        self.solve(Cell{row: ii, col: jj}, rng);
+                    } else {
+                        self[Cell{row: ii, col: jj}] = 0i8;
+                    }
+                }
+            }
+        }
+        if self.check_complete_puzzle() {
+            return
+        }
+    }
+
+    fn check_intermediate_puzzle(&self, last_modified_cell: Cell) -> bool {
+        // println!("Row: {:?}", curr_board.get_row((&last_modified_cell).row));
+        // println!("Col: {:?}", curr_board.get_col((&last_modified_cell).col));
+        // println!("SS: {:?}", curr_board.get_subsquare(&last_modified_cell));
+        if !has_unique_elements(self.get_row((&last_modified_cell).row)) {
+            return false;
+        } else if !has_unique_elements(self.get_col((&last_modified_cell).col)) {
+            return false;
+        } else if !has_unique_elements(self.get_subsquare(&last_modified_cell)) {
+            return false;
+        }
+        true
+    }
+
+    fn check_complete_puzzle(&self) -> bool {
+        for row in self.board.iter() {
+            if !self.all_nums_to_match.iter().all(|x| row.contains(x)) {
+                return false;
+            }
+        }
+        for col_idx in 0..self.size as usize {
+            let col = self.borrow().get_col(col_idx);
+            if !self.all_nums_to_match.iter().all(|x| col.contains(x)) {
+                return false;
+            }
+        }
+        for subsquare_row_idx in 0..self.subsquare_size {
+            for subsquare_col_idx in 0..self.subsquare_size {
+                let subsquare = self.get_subsquare(&Cell{row: subsquare_row_idx, col: subsquare_col_idx});
+                if !self.all_nums_to_match.iter().all(|x| subsquare.contains(x)) {
+                    return false;
+                }
+            }
+        }
+
+        return true
     }
 
     fn get_row(&self, row: usize) -> Vec<i8> {
