@@ -150,13 +150,16 @@ impl Board{
     }
 
     fn solve(&mut self, last_modified_cell: Cell, mut rng: ThreadRng) {
+        let mut untried_cell_values: Vec<i8> = self.all_nums_to_match.clone();
+
         for (ii, row) in self.board.clone().into_iter().enumerate() {
             if ii < last_modified_cell.row {
                 continue;
             }
 
             for (jj, &_col) in row.iter().enumerate() {
-                let mut untried_cell_values: Vec<i8> = self.all_nums_to_match.clone();
+                untried_cell_values = self.all_nums_to_match.clone();
+                // let mut untried_cell_values: Vec<i8> = self.all_nums_to_match.clone();
                 // .into_iter().filter(|x| !self.get_row(ii).contains(x) &&
                 // !self.get_col(jj).contains(x) &&
                 // !self.get_subsquare(&Cell { row: ii, col: jj }).contains(x)).collect();
@@ -260,6 +263,10 @@ impl Board{
         }
 
         subsquare.clone().iter().filter(|&&x| x != 0).map(|x| *x).collect::<Vec<i8>>()
+        // self.board.clone().iter().enumerate()
+        //     .filter(|(idx, &row)| subsquare_row_idx <= *idx && *idx < subsq_row_end)
+        //     .map(|(_, &row)| row[subsq_col_start..subsq_col_end])
+        //     .collect()
     }
 }
 
