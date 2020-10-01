@@ -1,29 +1,32 @@
 use csv;
-use std::borrow::{BorrowMut, Borrow};
-use serde::Deserialize;
-use std::ops::{Index, IndexMut, Rem};
-use std::collections::HashSet;
 use rand::prelude::ThreadRng;
-use std::hash::Hash;
 use rand::seq::SliceRandom;
+use serde::Deserialize;
+use std::borrow::{BorrowMut, Borrow};
+use std::collections::HashSet;
+use std::fmt;
+use std::hash::Hash;
+use std::io;
+use std::ops::{Index, IndexMut, Rem};
 
 
 fn main() {
     let mut board = read_puzzle(String::from("sample_puzzle.csv"));
-    println!("{:?}", board);
-    println!("{}", &board[Cell{row: 0, col: 0}]);
-    println!("{}", &board[Cell{row: 4, col: 2}]);
-    println!("{}", &board[Cell{row: 1, col: 1}]);
+    println!("{}", board);
+    // println!("{}", &board[Cell{row: 0, col: 0}]);
+    // println!("{}", &board[Cell{row: 4, col: 2}]);
+    // println!("{}", &board[Cell{row: 1, col: 1}]);
 
     let mut rng = rand::thread_rng();
 
     board.solve(Cell{row: 0, col: 0}, rng);
-    println!("{:?}", board);
+    println!("{}", board);
 
     board = read_puzzle(String::from("9x9_tough.csv"));
+    println!("{}", board);
     board.solve(Cell{row: 0, col: 0}, rng);
-    println!("{:?}", board);
-    //
+    println!("{}", board);
+
     // board = read_puzzle(String::from("16x16_sample_puzzle.csv"));
     // board.solve(Cell{row: 0, col: 0}, rng);
     // println!("{:?}", board);
@@ -139,15 +142,27 @@ impl Board{
 
     fn solve(&mut self, last_modified_cell: Cell, mut rng: ThreadRng) {
         self.update_choices();
+        // println!("board: {}", self);
+
         // for choices in &mut self.available_choices {
         for choices_idx in 0..self.available_choices.len() {
             if self.check_complete_puzzle() {
                 return;
             }
 
+            // println!("{:?}", self.available_choices[choices_idx]);
+            // let mut guess = String::new();
+            // io::stdin().read_line(&mut guess).expect("Failed to read line");
+
             let choices_thing = &self.available_choices[choices_idx];
             let cell = Cell{row: choices_thing.cell.row, col: choices_thing.cell.col};
+
             let mut valid_choices: Vec<i8> = choices_thing.choices.iter().map(|&x| x).collect();
+
+            // println!("cell: {}", cell);
+            // println!("choices: {:?}", valid_choices);
+
+
             while self.board[(&cell).row][(&cell).col] == 0 {
                 // let mut valid_choices: Vec<i8> = choices.choices.clone();
                 // let valid_choices: Vec<i8> = self.available_choices[choices_idx].choices;
@@ -175,18 +190,45 @@ impl Board{
     }
 
     fn update_choices(&mut self) {
+        // println!("available_choices: {:?}", self.available_choices);
+
+        self.available_choices.clear();
+        // println!("available_choices: {:?}", self.available_choices);
         for (ii, row) in self.board.clone().into_iter().enumerate() {
             for (jj, &_col) in row.iter().enumerate() {
                 let mut invalid_vals: Vec<i8> = self.get_row(ii);
+
+                // if ii == 1 && jj == 5 {
+                //     println!("invalid from row 1: {:?}", invalid_vals.iter());
+                // }
+
                 invalid_vals.append(&mut self.get_col(jj));
+
+                // if ii == 1 && jj == 5 {
+                //     println!("invalid from row 1 and col 5: {:?}", invalid_vals.iter());
+                // }
+
+
                 invalid_vals.append(&mut self.get_subsquare(&Cell{row: ii, col: jj}));
+
+                // if ii == 1 && jj == 5 {
+                //     println!("invalid from row 1 and col 5 and subsquare: {:?}", invalid_vals.iter());
+                // }
+
+
                 let valid_vals: Vec<i8> = self.all_nums_to_match.clone().into_iter()
                     .filter(|&x| !invalid_vals.contains(&x)).collect::<Vec<i8>>();
 
                 self.available_choices.push(Choices{
                     cell: Cell{row:ii, col: jj},
-                    choices: valid_vals,
+                    choices: valid_vals.clone(),
                 });
+
+                // if ii == 1 && jj == 5 {
+                //     println!("invalid choices for (1, 5): {:?}", invalid_vals.iter());
+                //     println!("valid_choices for (1, 5): {:?}", valid_vals.iter());
+                // }
+
             }
         }
         // println!("Before sorting!");
@@ -250,18 +292,37 @@ impl Board{
     }
 
     fn get_subsquare(&self, cell: &Cell) -> Vec<i8> {
-        let subsquare_row_idx = cell.row.rem(self.subsquare_size as usize);
+        // Rust integer division also seems to perform an implicit `floor` operation, but this
+        // explicit version makes things more obvious so that I won't forget that I need the floor
+        let subsquare_row_idx = ((cell.row / self.subsquare_size) as f32).floor() as usize;
         let subsq_row_start = subsquare_row_idx * self.subsquare_size;
         let subsq_row_end = subsq_row_start + self.subsquare_size;
 
-        let subsquare_col_idx = cell.col.rem(self.subsquare_size as usize);
+        let subsquare_col_idx = ((cell.col / self.subsquare_size) as f32).floor() as usize;
         let subsq_col_start = subsquare_col_idx * self.subsquare_size;
         let subsq_col_end = subsq_col_start + self.subsquare_size;
 
         let mut subsquare: Vec<i8> = Vec::new();
-        for row in self.board[subsq_row_start..subsq_row_end].iter() {
+        // for row in self.board[subsq_row_start..subsq_row_end].iter() {
+        for (ii, row) in self.board.iter().enumerate() {
+            if !(subsq_row_start <= ii && ii < subsq_row_end) {
+                continue
+            }
+            // if cell.row == 1 && cell.col == 5 {
+            //     println!("Getting numbers from row: {:?}", row.iter());
+            // }
+
             subsquare.extend_from_slice(&row[subsq_col_start..subsq_col_end]);
         }
+
+        // if cell.row == 1 && cell.col == 5 {
+        //     println!("Subsquare row start and end: {}-{} \t col start and end: {}-{}",
+        //              subsq_row_start, subsq_row_end,
+        //              subsq_col_start, subsq_col_end
+        //     );
+        //     println!("row_idx: {}, \t col_idx: {}", subsquare_row_idx, subsquare_col_idx);
+        //     println!("(1, 5) subsquare: {:?}", subsquare.iter());
+        // }
 
         subsquare.clone().iter().filter(|&&x| x != 0).map(|x| *x).collect::<Vec<i8>>()
     }
@@ -273,6 +334,13 @@ struct Cell {
     col: usize,
 }
 
+impl fmt::Display for Cell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(row: {}, col: {})", self.row, self.col)
+    }
+}
+
+
 impl Index<Cell> for Board {
     type Output = i8;
     fn index(&self, cell: Cell) -> &i8 {
@@ -283,6 +351,18 @@ impl Index<Cell> for Board {
 impl IndexMut<Cell> for Board {
     fn index_mut(&mut self, cell: Cell) -> &mut i8 {
         &mut self.board[cell.row][cell.col]
+    }
+}
+
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (ii, row) in self.board.iter().enumerate() {
+            write!(f, "\n");
+            for (jj, col) in row.iter().enumerate() {
+                write!(f, " {} ", *col);
+            }
+        }
+        write!(f, "\n")
     }
 }
 
